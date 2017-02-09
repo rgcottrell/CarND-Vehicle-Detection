@@ -167,31 +167,26 @@ We chose not to use the obvious window sizes of powers of two so that the overla
 
 ```python
 WINDOW_SIZES = [(70, 70), (105, 105), (130, 130)]
+WINDOW_Y_START_STOP = [(360, 560), (380, 640), (400, 720)]
 WINDOW_OVERLAP = (0.75, 0.75)
 
 # This assumes incoming image is encoded RGB.
 def sliding_windows(img):
-    # Set the start and stop regions to scan. We will only scan the bottom half of the image.
-    x_start = 0
-    x_stop = img.shape[1]
-    y_start = img.shape[0] // 2
-    y_stop = img.shape[0]
-    
-    # Compute the span of the region to be searched.
-    xspan = x_stop - x_start
-    yspan = y_stop - y_start
-    
     # Accumulate the list of windows to be searched.
     window_list = []
     
     # Process each window size.
-    for xy_window in WINDOW_SIZES:
-        # Compute the step between successive windows.
-        nx_pix_per_step = np.int(xy_window[0] * (1. - WINDOW_OVERLAP[0]))
-        ny_pix_per_step = np.int(xy_window[1] * (1. - WINDOW_OVERLAP[1]))
+    for (xy_window, y_start_stop) in zip(WINDOW_SIZES, WINDOW_Y_START_STOP):
+        # Set the start and stop regions to scan.
+        x_start = 0
+        x_stop = img.shape[1]
+        y_start = y_start_stop[0]
+        y_stop = y_start_stop[1]
+        
         # Compute the number of windows to generate at this size.
         nx_windows = int(xspan/nx_pix_per_step) - 1
         ny_windows = int(yspan/ny_pix_per_step) - 1
+        
         # Loop through the x and y positions to find the window coordinates.
         for ys in range(ny_windows):
             for xs in range(nx_windows):
@@ -226,7 +221,7 @@ Again, this implementation is still fairly naive. In the future, we could speed 
 ```python
 # Required confidence in prediction. A score greater than zero indicate a
 # positive prediction.
-CONFIDENCE_THRESHOLD = 1.0
+CONFIDENCE_THRESHOLD = 0.8
 
 def search_windows(img, windows, clf, scaler):
     # Create a list to hold the positive detections.
@@ -266,7 +261,7 @@ For our test images, the high confidence threshold we have set on the classifier
 
 
 ```python
-HEATMAP_THRESHOLD = 2
+HEATMAP_THRESHOLD = 4
 
 def add_heat(heatmap, bboxes):
     # Iterate through each bbox.
@@ -326,7 +321,7 @@ To get better detection results as the video progresses, we will be collecting t
 
 ```python
 # The number of frames to smooth over.
-N_FRAMES = 6
+N_FRAMES = 10
 
 class FrameData:
     def __init__(self):
@@ -411,10 +406,22 @@ In the end, we suffered from both of these problems. Our high filtering was not 
 
 Once again, this project illustrated the high degree of manual parameter tuning that is required for effective feature engineering and classification with traditional computer vision techniques. Deep learning approaches should be able learn and adapt to changing features.
 
-### Where the Pipeline Could fail
+### Where the Pipeline Could Fail
 
 There were several weak areas in the pipeline. While the pipeline was able to detect nearby vehicles as they passed our car, other vehicles further in the distance and on the opposite side of the road were rarely detected. This will unfortunately affect the safety of potential path planning strategies by not being able prepare for developing traffic situations.
 
 The pipeline was not able to effectively separate vehicles that drove too near each other. Instead of cleanly annotating the individual vehicles, a single bounding box would be drawn around both.
 
 The pipeline was not tested against different types of vehicles, such as motorcyles or trucks. More importantly, it is unlikely that the classifier would correctly predict pedestrians or other obstacles in the road that could pose a significant safety risk.
+
+### Areas for Improvement
+
+There is a lot of room for improvement in the performance of the detection. One limitation of the current approach used is that the HOG features are recomputed for each sliding window considered. We should be able to acheive substantial improvement by extracting HOG features once for each frame as a whole, and then subsampling these features for each window considered. This improvement in performance, however, would come at a cost of additional bookkeeping complexity.
+
+We acheived a high degree of accuracy for our classifier using just HOG features for each of the YUV channels of the image. However, we could increase the accuracy by increasing the number of gradient bins. Or we could add additional features such as spatial binning or color histograms. Increasing accuracy, however, would come at the cost of additional processing cost to extract and predict with those features.
+
+Alternatively, we might experiment with simplifying the model. If we are willing to sacrifice some accuracy, we might be able to construct a model that performs much more quickly. We could use this additional speed to analyze more windows per frame.
+
+There are other areas where the pipeline could be improved. Making better choices about the size of the sliding windows and portion of the image we scan with each size could lead to better results. For example, there's little value using large windows at the center of the image or small windows at the bottom since these will not match the sizes of vehicles we will find there.
+
+Additional tuning of the decision function confidence and heat map thresholding could improve results. We could also experiment with better smoothing and false positive rejection by making more sophisticated use of the classifier detections and heat maps generated in previous frames. Additionally, we could anticipate the location of detected vehicles in future frames based on their location and estimated speed in previous frames.
