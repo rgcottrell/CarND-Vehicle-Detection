@@ -24,21 +24,6 @@ from sklearn.preprocessing import StandardScaler
 
 Examples of vehicles and non-vehicles were collected from the [GTI vehicle image database](http://www.gti.ssr.upm.es/data/Vehicle_database.html) and the [KITTI vision benchmark](http://www.cvlibs.net/datasets/kitti/). The [vehicle](https://s3.amazonaws.com/udacity-sdc/Vehicle_Tracking/vehicles.zip) and [non-vehicle](https://s3.amazonaws.com/udacity-sdc/Vehicle_Tracking/non-vehicles.zip) collections should be downloaded and unzipped into this project directory.
 
-
-```python
-# Plot samples of vehicle and non-vehicle images.
-example_vehicle = cv2.imread('vehicles/GTI_Right/image0000.png')
-example_non_vehicle = cv2.imread('non-vehicles/GTI/image8.png')
-
-fig = plt.figure()
-plt.subplot(121)
-plt.imshow(cv2.cvtColor(example_vehicle, cv2.COLOR_BGR2RGB))
-plt.title('Vehicle')
-plt.subplot(122)
-plt.imshow(cv2.cvtColor(example_non_vehicle, cv2.COLOR_BGR2RGB))
-plt.title('Non-Vehicle')
-```
-
 ![png](output_3_1.png)
 
 
@@ -51,10 +36,6 @@ The standard RGB colorspace used to display images on computer screens is not ne
 def colorTransform(img):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
     return img
-
-# Transform the example images to the YUV colorspace.
-yuv_vehicle = colorTransform(example_vehicle)
-yuv_non_vehicle = colorTransform(example_non_vehicle)
 ```
 
 Now that the image has been loaded and converted to our preferred colorspace, we can extract the HOG features for each training image. Using the HOG features allows us to consider a fingerprint of the image that still allows some variability in the actual pixels.
